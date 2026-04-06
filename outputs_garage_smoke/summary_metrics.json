@@ -1,0 +1,82 @@
+{
+  "all_clients_fedavg": {
+    "final_test": {
+      "accuracy": 0.8064243448858833,
+      "precision": 0.39176626826029215,
+      "recall": 1.0,
+      "f1": 0.5629770992366412,
+      "auc": 0.9260629025526029
+    },
+    "final_fairness": {
+      "client_f1_mean": 0.5825755823832716,
+      "client_f1_std": 0.3670952051808373,
+      "client_f1_var": 0.13475888966676106
+    },
+    "communication_MB": 0.1348114013671875,
+    "convergence_round_95pct_peak_f1": 2
+  },
+  "random": {
+    "final_test": {
+      "accuracy": 0.8060016906170753,
+      "precision": 0.3861111111111111,
+      "recall": 0.9423728813559322,
+      "f1": 0.547783251231527,
+      "auc": 0.9192603262159442
+    },
+    "final_fairness": {
+      "client_f1_mean": 0.5710516934046345,
+      "client_f1_std": 0.3610367623987168,
+      "client_f1_var": 0.13034754380334748
+    },
+    "communication_MB": 0.06740570068359375,
+    "convergence_round_95pct_peak_f1": 2
+  },
+  "greedy": {
+    "final_test": {
+      "accuracy": 0.8064243448858833,
+      "precision": 0.39176626826029215,
+      "recall": 1.0,
+      "f1": 0.5629770992366412,
+      "auc": 0.9255423974334842
+    },
+    "final_fairness": {
+      "client_f1_mean": 0.5825755823832716,
+      "client_f1_std": 0.3670952051808373,
+      "client_f1_var": 0.13475888966676106
+    },
+    "communication_MB": 0.06740570068359375,
+    "convergence_round_95pct_peak_f1": 2
+  },
+  "cluster": {
+    "final_test": {
+      "accuracy": 0.8068469991546915,
+      "precision": 0.3914209115281501,
+      "recall": 0.9898305084745763,
+      "f1": 0.5609990393852066,
+      "auc": 0.9258353861640574
+    },
+    "final_fairness": {
+      "client_f1_mean": 0.5793444714770636,
+      "client_f1_std": 0.36877449329026557,
+      "client_f1_var": 0.13599462690149214
+    },
+    "communication_MB": 0.06740570068359375,
+    "convergence_round_95pct_peak_f1": 2
+  },
+  "mho": {
+    "final_test": {
+      "accuracy": 0.8131868131868132,
+      "precision": 0.3948497854077253,
+      "recall": 0.9355932203389831,
+      "f1": 0.5553319919517102,
+      "auc": 0.9227712805571697
+    },
+    "final_fairness": {
+      "client_f1_mean": 0.5645084710044345,
+      "client_f1_std": 0.35802766150647525,
+      "client_f1_var": 0.1281838064037952
+    },
+    "communication_MB": 0.06740570068359375,
+    "convergence_round_95pct_peak_f1": 2
+  }
+}
