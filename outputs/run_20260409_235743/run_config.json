@@ -1,0 +1,28 @@
+{
+  "data_dir": ".",
+  "client_files": [
+    "IoT_Fridge.csv",
+    "IoT_Garage_Door.csv",
+    "IoT_Thermostat.csv"
+  ],
+  "config": {
+    "data_dir": ".",
+    "clients": "IoT_Fridge.csv,IoT_Garage_Door.csv,IoT_Thermostat.csv",
+    "max_rows_per_client": 3000,
+    "val_size": 0.15,
+    "test_size": 0.15,
+    "rounds": 5,
+    "local_epochs": 2,
+    "batch_size": 128,
+    "lr": 0.001,
+    "select_k": 2,
+    "mho_pop_size": 30,
+    "mho_iters": 15,
+    "proxy_epochs": 3,
+    "proxy_fraction": 0.8,
+    "seed": 42,
+    "strategies": "mho,hybrid",
+    "output_dir": "outputs"
+  },
+  "device": "cuda"
+}

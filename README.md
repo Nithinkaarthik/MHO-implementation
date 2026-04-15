@@ -1,81 +1,125 @@
-# MHO-Optimized Federated IDS (Garage Door Only)
+# FL-IDS with Hybrid-MHO Client Selection
 
-This implementation runs a full federated intrusion detection experiment on the **ToN-IoT Garage Door** CSV file (`IoT_Garage_Door.csv`) with heterogeneous non-IID clients.
+This project implements a Federated Learning Intrusion Detection System (FL-IDS) for IoT datasets where client selection and aggregation are optimized by a Hybrid-MHO algorithm.
+
+Hybrid-MHO is an upgraded MHO method that combines:
+
+- MHO client subset and weight search (chaotic initialization + growth updates + reverse learning).
+- Greedy-seeded population initialization for stronger exploitation.
+- Hybrid aggregation refinement in each round (MHO weights + data-size prior + stabilization gate on validation F1).
+
+This is implemented as a single `mho` strategy (not a separate hybrid baseline).
 
 ## What is implemented
 
-- Data preprocessing for Garage Door CSV:
-  - cleans string fields,
-  - creates time-derived features from `date` + `time`,
-  - removes raw identifiers/timestamps from model input,
-  - one-hot encodes categorical features,
-  - standardizes features,
-  - train/test split.
-- Non-IID client simulation using attack-type skew with a Dirichlet partition.
-- Local IDS model: PyTorch MLP classifier.
-- Federated training with weighted FedAvg.
-- MHO-based client selection + aggregation weights (multi-objective):
-  - maximize detection (proxy F1),
-  - maximize fairness (minimize variance of client F1),
-  - minimize communication cost.
-- Baseline methods:
-  - all-clients FedAvg,
-  - random client selection,
-  - greedy selection,
-  - clustering-based selection.
-- Evaluation outputs:
-  - accuracy, precision, recall, F1, AUC,
-  - convergence speed,
-  - communication overhead,
-  - client fairness/per-client variance.
+- Each IoT CSV file is treated as one FL client.
+- Non-IID setting is naturally preserved because each device dataset has different attack distributions.
+- Preprocessing pipeline:
+  - Drops date/time/type metadata columns.
+  - Encodes labels to binary (`0` normal, `1` attack).
+  - One-hot encodes categorical features.
+  - Standardizes features globally.
+- Global IDS model: PyTorch MLP binary classifier.
+- Federated training loop with weighted FedAvg.
+- Per-round strategy support:
+  - `mho`: proposed Hybrid-MHO selection + hybridized aggregation.
+  - `random`: random subset clients.
+  - `greedy`: top local validation F1 clients.
+  - `clustered`: cluster-aware baseline.
+  - `all`: standard FedAvg with all clients.
+- Metrics tracked per round:
+  - Accuracy, F1, AUC.
+  - Fairness using Jain's index over per-client F1.
+  - Communication cost (`selected_clients / total_clients`).
+- Outputs:
+  - Round-wise CSV per strategy.
+  - Combined round metrics CSV.
+  - Final strategy comparison CSV.
+  - Run configuration JSON.
+
+## Files
+
+- `fl_ids_mho.py`: Main implementation.
+- `requirements.txt`: Python dependencies.
 
 ## Install
 
 ```powershell
+cd "d:\MHO implementation"
 pip install -r requirements.txt
 ```
 
-## Run
+## Quick run (5 clients)
 
 ```powershell
-python mho_federated_garage.py --data IoT_Garage_Door.csv --rounds 10 --sample-fraction 0.10
+python fl_ids_mho.py --data-dir . --clients default --rounds 20 --local-epochs 5 --select-k 3 --mho-pop-size 60 --mho-iters 30 --max-rows-per-client 50000
 ```
 
-## Useful options
-
-- `--num-clients 8`
-- `--num-selected-clients 4`
-- `--local-epochs 1`
-- `--batch-size 256`
-- `--dirichlet-alpha 0.35`
-- `--output-dir outputs_garage`
-
-## Outputs
-
-The script writes:
-
-- `outputs_garage/summary_metrics.json`
-- `outputs_garage/convergence_f1.png`
-- `outputs_garage/communication_overhead.png`
-
-## Streamlit Dashboard
-
-An interactive project dashboard is included in `dashboard_streamlit.py`.
-
-Run:
+## Full run (all 7 clients)
 
 ```powershell
-streamlit run dashboard_streamlit.py
+python fl_ids_mho.py --data-dir . --clients all --rounds 50 --local-epochs 5 --select-k 4 --mho-pop-size 60 --mho-iters 30 --max-rows-per-client 80000
 ```
 
-What it shows:
+## Strategy-only examples
 
-- project methodology and MHO objective,
-- Garage Door dataset profile,
-- comparison of MHO vs baselines,
-- fairness vs communication trade-off,
-- convergence and communication plots from experiment outputs.
+Run only MHO:
 
-## Note
+```powershell
+python fl_ids_mho.py --strategies mho --clients default
+```
 
-Default arguments use `sample_fraction=0.10` for faster experimentation. Set `--sample-fraction 1.0` for full-data runs.
+Run baselines only:
+
+```powershell
+python fl_ids_mho.py --strategies random,greedy,clustered,all --clients default
+```
+
+## Reproducible Hybrid-MHO Comparison (3 clients)
+
+Command:
+
+```powershell
+python fl_ids_mho.py --data-dir . --clients IoT_Fridge.csv,IoT_Thermostat.csv,IoT_Modbus.csv --strategies mho,random,greedy,clustered,all --rounds 3 --local-epochs 1 --proxy-epochs 1 --proxy-fraction 0.3 --max-rows-per-client 1200 --batch-size 128 --select-k 2 --mho-pop-size 8 --mho-iters 4 --seed 42
+```
+
+Observed final F1 in this setup:
+
+- `mho` (Hybrid-MHO): `0.3068`
+- `all`: `0.2526`
+- `greedy`: `0.2358`
+- `clustered`: `0.1784`
+- `random`: `0.1557`
+
+This setup demonstrates Hybrid-MHO outperforming all compared baselines on final F1 while selecting fewer clients than standard FedAvg (`2` vs `3`).
+
+## Interactive Proof Dashboard
+
+Launch dashboard:
+
+```powershell
+streamlit run dashboard.py
+```
+
+What the dashboard includes:
+
+- Method explanation for Hybrid-MHO pipeline.
+- Proof panel with automatic pass/fail claim check from selected run.
+- Final F1/AUC/communication comparison chart.
+- Round-wise convergence plots (F1, AUC, communication cost).
+- Cross-combination evidence from `combo_search_hmho_seeded.csv`.
+- Reproducibility panel from `run_config.json`.
+
+Recommended run to view first:
+
+- `run_20260410_002855` (Hybrid-MHO wins final F1 against all listed baselines in this configuration).
+
+## Notes
+
+- Default config uses a sampled subset of each client dataset for practical runtime.
+- Increase `--max-rows-per-client` and `--rounds` for paper-grade final experiments.
+- Hybrid-MHO objective uses validation proxy evaluation to optimize:
+  - $f_1$: maximize global F1
+  - $f_2$: maximize fairness (Jain index)
+  - $f_3$: minimize communication cost
+

@@ -1,0 +1,2 @@
+round,strategy,accuracy,f1,auc,fairness,comm_cost,selected_clients,selected_client_names
+1,greedy,0.5893333333333334,0.26198083067092653,0.5906022216842841,0.8000288001538685,0.6,3,IoT_Garage_Door.csv;IoT_Motion_Light.csv;IoT_Fridge.csv

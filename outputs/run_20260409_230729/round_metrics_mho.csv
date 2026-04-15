@@ -1,0 +1,2 @@
+round,strategy,accuracy,f1,auc,fairness,comm_cost,selected_clients,selected_client_names,proxy_f1,proxy_fairness,proxy_comm_cost,pareto_size
+1,mho,0.7048888888888889,0.12169312169312169,0.48477299012883623,0.32464547026739393,0.2,1,IoT_Motion_Light.csv,0.24514991181657847,0.9922550760235639,0.2,8.0
