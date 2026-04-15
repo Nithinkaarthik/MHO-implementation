@@ -20,9 +20,9 @@ ALGO_COLORS = {
     "Random": "#f59e0b",
     "Greedy": "#2563eb",
     "Clustered": "#9333ea",
-    "PSO": "#f97316",
-    "GWO": "#14b8a6",
-    "Hybrid PSO-GWO": "#16a34a",
+    "PSO": "#fb923c",
+    "GWO": "#2dd4bf",
+    "Hybrid PSO-GWO": "#10b981",
 }
 
 
@@ -31,113 +31,155 @@ def inject_theme():
         """
 <style>
 :root {
-    --bg: #f5f8ff;
-    --panel: #ffffff;
-    --ink: #101828;
-    --muted: #475467;
-    --line: #d0d5dd;
-    --accent: #0b7285;
-    --accent-soft: #e6f6f9;
-    --good: #15803d;
-    --good-bg: #e8f7ec;
-    --bad: #b42318;
-    --bad-bg: #fef3f2;
-    --hero-1: #0b7285;
-    --hero-2: #2563eb;
+    --bg-color: #0b0f19;
+    --panel-color: rgba(20, 27, 45, 0.7);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.4);
+    --good: #10b981;
+    --good-bg: rgba(16, 185, 129, 0.15);
+    --bad: #ef4444;
+    --bad-bg: rgba(239, 68, 68, 0.15);
 }
 
+/* Force dark background for Streamlit app */
 .stApp {
-    background:
-      radial-gradient(1200px 380px at 10% -20%, #e0f2fe 0%, transparent 60%),
-      radial-gradient(900px 300px at 95% 0%, #dcfce7 0%, transparent 55%),
-      var(--bg);
+    background: radial-gradient(circle at 15% 10%, rgba(30, 58, 138, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 85% 90%, rgba(16, 185, 129, 0.15) 0%, transparent 40%),
+                var(--bg-color);
+    color: var(--text-main);
+}
+
+/* Override default sidebar */
+[data-testid="stSidebar"] {
+    background-color: #0f172a !important;
+    border-right: 1px solid var(--panel-border) !important;
+}
+
+[data-testid="stSidebar"] .stSlider > div > div > div > div {
+    color: var(--text-main) !important;
+}
+
+/* Global Typography Fixes */
+.stMarkdown p, .stMarkdown li, h1, h2, h3, h4, h5, h6, .st-emotion-cache-1629p8f h1, .st-emotion-cache-1629p8f h2, .st-emotion-cache-1629p8f h3 {
+    color: var(--text-main) !important;
 }
 
 .hero {
-    padding: 1.2rem 1.4rem;
-    border-radius: 16px;
-    background: linear-gradient(120deg, var(--hero-1), var(--hero-2));
-    box-shadow: 0 10px 30px rgba(11, 114, 133, 0.28);
-    color: white;
-    margin-bottom: 1rem;
+    padding: 2rem 2.5rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.8), rgba(59, 130, 246, 0.6));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.05);
+    color: #ffffff !important;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
 }
 
 .hero h1 {
-    margin: 0;
-    font-size: 1.9rem;
-    letter-spacing: 0.2px;
+    margin: 0 !important;
+    font-size: 2.3rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px !important;
+    color: #ffffff !important;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .hero p {
-    margin: 0.35rem 0 0 0;
-    opacity: 0.94;
-    font-size: 1rem;
+    margin: 0.8rem 0 0 0 !important;
+    opacity: 0.9 !important;
+    font-size: 1.15rem !important;
+    font-weight: 300 !important;
+    color: #e0e7ff !important;
 }
 
 .section-card {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 1rem 1.1rem;
-    box-shadow: 0 2px 10px rgba(16, 24, 40, 0.04);
+    background: var(--panel-color);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(12px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 1rem;
+}
+.section-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .kpi {
-    background: var(--panel);
-    border: 1px solid var(--line);
+    background: var(--panel-color);
+    border: 1px solid var(--panel-border);
     border-left: 4px solid var(--accent);
-    border-radius: 12px;
-    padding: 0.8rem 0.9rem;
+    border-radius: 16px;
+    padding: 1.2rem;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.kpi:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px var(--accent-glow);
+    border-left: 4px solid #60a5fa;
 }
 
 .kpi .label {
-    color: var(--muted);
-    font-size: 0.82rem;
-    margin-bottom: 0.1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.4rem;
 }
 
 .kpi .value {
-    color: var(--ink);
-    font-size: 1.22rem;
-    font-weight: 700;
+    color: var(--text-main);
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1.2;
 }
 
 .badge-pass {
     display: inline-block;
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
+    padding: 0.3rem 0.8rem;
+    border-radius: 9999px;
     color: var(--good);
     background: var(--good-bg);
-    border: 1px solid #b7e4c7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
 }
 
 .badge-fail {
     display: inline-block;
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
+    padding: 0.3rem 0.8rem;
+    border-radius: 9999px;
     color: var(--bad);
     background: var(--bad-bg);
-    border: 1px solid #fecdd3;
+    border: 1px solid rgba(239, 68, 68, 0.3);
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
 }
 
-div[data-testid="stMetric"] {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 0.45rem 0.6rem;
+hr {
+    border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .small-note {
-    color: var(--muted);
+    color: #6b7280;
     font-size: 0.86rem;
 }
 
 @media (max-width: 900px) {
-    .hero h1 { font-size: 1.4rem; }
+    .hero h1 { font-size: 1.6rem !important; }
 }
 </style>
         """,
@@ -255,38 +297,51 @@ def explain_hybrid_advantage(table):
 
 
 def render_metric_plot(df, metric, selected_algorithms):
+    plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(10, 4.4))
+    fig.patch.set_alpha(0.0)
+    ax.set_facecolor("none")
+    
     sub = df[df["algorithm"].isin(selected_algorithms)]
     for algo in selected_algorithms:
         s = sub[sub["algorithm"] == algo]
         if not s.empty:
-            color = ALGO_COLORS.get(algo, "#334155")
-            width = 2.8 if algo == HYBRID_NAME else 2.0
-            alpha = 1.0 if algo == HYBRID_NAME else 0.88
+            color = ALGO_COLORS.get(algo, "#9ca3af")
+            width = 3.2 if algo == HYBRID_NAME else 2.0
+            alpha = 1.0 if algo == HYBRID_NAME else 0.75
             ax.plot(
                 s["round"],
                 s[metric],
                 marker="o",
+                markersize=6 if algo == HYBRID_NAME else 4,
                 linewidth=width,
                 color=color,
                 alpha=alpha,
                 label=algo,
             )
-    ax.set_xlabel("Round")
-    ax.set_ylabel(metric.upper())
-    ax.set_title(f"{metric.upper()} vs Round")
-    ax.set_facecolor("#fbfcfe")
-    ax.grid(alpha=0.24, linestyle="--")
+            
+    ax.set_xlabel("Communication Round", color="#9ca3af", fontweight='bold', fontsize=10)
+    ax.set_ylabel(metric.upper(), color="#9ca3af", fontweight='bold', fontsize=10)
+    ax.set_title(f"{metric.upper()} vs Round", color="#ffffff", fontweight='bold', pad=15)
+    
+    ax.grid(alpha=0.1, color="#ffffff", linestyle="--")
     for spine in ax.spines.values():
-        spine.set_alpha(0.35)
-    ax.legend(loc="best")
-    fig.patch.set_alpha(0)
+        spine.set_alpha(0.15)
+        spine.set_color("#ffffff")
+        
+    ax.tick_params(axis='x', colors='#9ca3af')
+    ax.tick_params(axis='y', colors='#9ca3af')
+    
+    leg = ax.legend(loc="best", frameon=True, framealpha=0.1, edgecolor="none")
+    for text in leg.get_texts():
+        text.set_color("#e2e8f0")
+        
     plt.tight_layout()
     st.pyplot(fig)
 
 
 def main():
-    st.set_page_config(page_title="Hybrid FL Dashboard", layout="wide")
+    st.set_page_config(page_title="Hybrid FL Dashboard", layout="wide", initial_sidebar_state="expanded")
     inject_theme()
 
     st.markdown(
@@ -358,7 +413,7 @@ Why this matters:
             v = "PASS" if ok else "FAIL"
             st.markdown(f"<div><b>{key}</b><br>{status_badge(v)}</div>", unsafe_allow_html=True)
             st.write("")
-        st.markdown("<hr style='border: 0; border-top: 1px solid #d0d5dd;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
         st.markdown(f"<b>overall_result</b><br>{status_badge(overall)}", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -370,11 +425,7 @@ Why this matters:
 
     with tab1:
         st.subheader("Why Hybrid Beats Baselines")
-        styled = (
-            table.style.format("{:.4f}")
-            .background_gradient(cmap="Blues", subset=["mean_f1", "best_f1", "efficiency", "utility"])
-            .background_gradient(cmap="RdYlGn_r", subset=["mean_cost", "mean_var"])
-        )
+        styled = table.style.format("{:.4f}")
         st.dataframe(styled, use_container_width=True)
 
         for line in explain_hybrid_advantage(table):
