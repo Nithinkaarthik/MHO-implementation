@@ -1,6 +1,0 @@
-round,strategy,accuracy,f1,auc,fairness,comm_cost,selected_clients,selected_client_names,proxy_f1,proxy_fairness,proxy_comm_cost,pareto_size
-1,mho,0.7048888888888889,0.12169312169312169,0.48477299012883623,0.32464547026739393,0.2,1,IoT_Motion_Light.csv,0.24514991181657847,0.9922550760235639,0.2,8.0
-1,random,0.22933333333333333,0.22933333333333333,0.5023501170015331,0.9777862625235247,0.6,3,IoT_Fridge.csv;IoT_Motion_Light.csv;IoT_Weather.csv,,,,
-1,greedy,0.5893333333333334,0.26198083067092653,0.5906022216842841,0.8000288001538685,0.6,3,IoT_Garage_Door.csv;IoT_Motion_Light.csv;IoT_Fridge.csv,,,,
-1,clustered,0.8542222222222222,0.2545454545454545,0.626707953414562,0.19999999999999998,0.6,3,IoT_Motion_Light.csv;IoT_Garage_Door.csv;IoT_Fridge.csv,,,,
-1,all,0.4631111111111111,0.27751196172248804,0.6216244385271255,0.8685235105408028,1.0,5,IoT_Fridge.csv;IoT_Garage_Door.csv;IoT_Thermostat.csv;IoT_Motion_Light.csv;IoT_Weather.csv,,,,

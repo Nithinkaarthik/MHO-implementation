@@ -1,2 +1,0 @@
-round,strategy,accuracy,f1,auc,fairness,comm_cost,selected_clients,selected_client_names
-1,random,0.22933333333333333,0.22933333333333333,0.5023501170015331,0.9777862625235247,0.6,3,IoT_Fridge.csv;IoT_Motion_Light.csv;IoT_Weather.csv

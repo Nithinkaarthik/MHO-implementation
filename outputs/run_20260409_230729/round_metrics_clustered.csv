@@ -1,2 +1,0 @@
-round,strategy,accuracy,f1,auc,fairness,comm_cost,selected_clients,selected_client_names
-1,clustered,0.8542222222222222,0.2545454545454545,0.626707953414562,0.19999999999999998,0.6,3,IoT_Motion_Light.csv;IoT_Garage_Door.csv;IoT_Fridge.csv

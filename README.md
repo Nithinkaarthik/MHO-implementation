@@ -1,125 +1,33 @@
-# FL-IDS with Hybrid-MHO Client Selection
+# Hybrid PSO-GWO Federated IDS
 
-This project implements a Federated Learning Intrusion Detection System (FL-IDS) for IoT datasets where client selection and aggregation are optimized by a Hybrid-MHO algorithm.
+This project implements a federated intrusion detection system for the ToN-IoT CSV files in this workspace. Each device CSV is treated as a federated client, a local MLP IDS is trained on each client, and a hybrid PSO-GWO selector chooses the participating clients every round.
 
-Hybrid-MHO is an upgraded MHO method that combines:
+## What is included
 
-- MHO client subset and weight search (chaotic initialization + growth updates + reverse learning).
-- Greedy-seeded population initialization for stronger exploitation.
-- Hybrid aggregation refinement in each round (MHO weights + data-size prior + stabilization gate on validation F1).
+- Binary IDS preprocessing for the provided ToN-IoT CSV files.
+- Federated training with FedAvg aggregation.
+- Hybrid PSO-GWO client selection.
+- Baselines: random, greedy, clustering-based, all-client FedAvg, plus PSO-only and GWO-only ablations.
+- Streamlit dashboard for performance, fairness, convergence, communication, and ablation analysis.
 
-This is implemented as a single `mho` strategy (not a separate hybrid baseline).
-
-## What is implemented
-
-- Each IoT CSV file is treated as one FL client.
-- Non-IID setting is naturally preserved because each device dataset has different attack distributions.
-- Preprocessing pipeline:
-  - Drops date/time/type metadata columns.
-  - Encodes labels to binary (`0` normal, `1` attack).
-  - One-hot encodes categorical features.
-  - Standardizes features globally.
-- Global IDS model: PyTorch MLP binary classifier.
-- Federated training loop with weighted FedAvg.
-- Per-round strategy support:
-  - `mho`: proposed Hybrid-MHO selection + hybridized aggregation.
-  - `random`: random subset clients.
-  - `greedy`: top local validation F1 clients.
-  - `clustered`: cluster-aware baseline.
-  - `all`: standard FedAvg with all clients.
-- Metrics tracked per round:
-  - Accuracy, F1, AUC.
-  - Fairness using Jain's index over per-client F1.
-  - Communication cost (`selected_clients / total_clients`).
-- Outputs:
-  - Round-wise CSV per strategy.
-  - Combined round metrics CSV.
-  - Final strategy comparison CSV.
-  - Run configuration JSON.
-
-## Files
-
-- `fl_ids_mho.py`: Main implementation.
-- `requirements.txt`: Python dependencies.
-
-## Install
+## Run the experiment
 
 ```powershell
 cd "d:\MHO implementation"
 pip install -r requirements.txt
+python hybrid_pso_gwo_ids.py --clients default --rounds 5 --strategies hybrid,random,greedy,clustered,all,pso,gwo
 ```
 
-## Quick run (5 clients)
-
-```powershell
-python fl_ids_mho.py --data-dir . --clients default --rounds 20 --local-epochs 5 --select-k 3 --mho-pop-size 60 --mho-iters 30 --max-rows-per-client 50000
-```
-
-## Full run (all 7 clients)
-
-```powershell
-python fl_ids_mho.py --data-dir . --clients all --rounds 50 --local-epochs 5 --select-k 4 --mho-pop-size 60 --mho-iters 30 --max-rows-per-client 80000
-```
-
-## Strategy-only examples
-
-Run only MHO:
-
-```powershell
-python fl_ids_mho.py --strategies mho --clients default
-```
-
-Run baselines only:
-
-```powershell
-python fl_ids_mho.py --strategies random,greedy,clustered,all --clients default
-```
-
-## Reproducible Hybrid-MHO Comparison (3 clients)
-
-Command:
-
-```powershell
-python fl_ids_mho.py --data-dir . --clients IoT_Fridge.csv,IoT_Thermostat.csv,IoT_Modbus.csv --strategies mho,random,greedy,clustered,all --rounds 3 --local-epochs 1 --proxy-epochs 1 --proxy-fraction 0.3 --max-rows-per-client 1200 --batch-size 128 --select-k 2 --mho-pop-size 8 --mho-iters 4 --seed 42
-```
-
-Observed final F1 in this setup:
-
-- `mho` (Hybrid-MHO): `0.3068`
-- `all`: `0.2526`
-- `greedy`: `0.2358`
-- `clustered`: `0.1784`
-- `random`: `0.1557`
-
-This setup demonstrates Hybrid-MHO outperforming all compared baselines on final F1 while selecting fewer clients than standard FedAvg (`2` vs `3`).
-
-## Interactive Proof Dashboard
-
-Launch dashboard:
+## Launch the dashboard
 
 ```powershell
 streamlit run dashboard.py
 ```
 
-What the dashboard includes:
-
-- Method explanation for Hybrid-MHO pipeline.
-- Proof panel with automatic pass/fail claim check from selected run.
-- Final F1/AUC/communication comparison chart.
-- Round-wise convergence plots (F1, AUC, communication cost).
-- Cross-combination evidence from `combo_search_hmho_seeded.csv`.
-- Reproducibility panel from `run_config.json`.
-
-Recommended run to view first:
-
-- `run_20260410_002855` (Hybrid-MHO wins final F1 against all listed baselines in this configuration).
+The dashboard can also launch a fresh experiment from the sidebar and will load the latest saved run automatically.
 
 ## Notes
 
-- Default config uses a sampled subset of each client dataset for practical runtime.
-- Increase `--max-rows-per-client` and `--rounds` for paper-grade final experiments.
-- Hybrid-MHO objective uses validation proxy evaluation to optimize:
-  - $f_1$: maximize global F1
-  - $f_2$: maximize fairness (Jain index)
-  - $f_3$: minimize communication cost
-
+- The default configuration uses sampled client subsets so the experiment completes in a reasonable time.
+- Increase `--max-rows-per-client`, `--rounds`, or the selector population/iterations for heavier runs.
+- The dashboard reports the actual comparison results from the latest run artifacts; it does not hard-code a success claim.
