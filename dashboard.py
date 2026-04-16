@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 RESULTS_PATH = Path("results.json")
@@ -210,17 +211,30 @@ def summarize_metrics(metrics, fairness_weight=0.2, cost_weight=0.1):
     cost = np.array(metrics["cost"], dtype=float)
     auc = np.array(metrics["auc"], dtype=float)
 
+    rounds = np.arange(1, len(f1) + 1, dtype=float)
+    f1_slope = float(np.polyfit(rounds, f1, 1)[0]) if len(f1) > 1 else 0.0
+    auc_slope = float(np.polyfit(rounds, auc, 1)[0]) if len(auc) > 1 else 0.0
+
     utility = float(np.mean(f1 - fairness_weight * f1_var - cost_weight * cost))
 
     return {
         "mean_f1": float(np.mean(f1)),
         "final_f1": float(f1[-1]),
         "best_f1": float(np.max(f1)),
+        "worst_f1": float(np.min(f1)),
+        "f1_std": float(np.std(f1)),
+        "f1_gain": float(f1[-1] - f1[0]) if len(f1) > 1 else 0.0,
         "mean_auc": float(np.mean(auc)),
+        "final_auc": float(auc[-1]),
+        "auc_std": float(np.std(auc)),
+        "auc_gain": float(auc[-1] - auc[0]) if len(auc) > 1 else 0.0,
         "mean_var": float(np.mean(f1_var)),
         "mean_cost": float(np.mean(cost)),
+        "cost_std": float(np.std(cost)),
         "efficiency": float(np.mean(f1 / (cost + 1e-12))),
         "utility": utility,
+        "f1_slope": f1_slope,
+        "auc_slope": auc_slope,
     }
 
 
@@ -246,7 +260,112 @@ def build_timeseries_df(results):
                     "auc": float(m["auc"][r]),
                 }
             )
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df["round_label"] = "Round " + df["round"].astype(str)
+        df = df.sort_values(["algorithm", "round"]).reset_index(drop=True)
+        for metric in ["f1", "f1_var", "cost", "auc"]:
+            df[f"{metric}_roll3"] = (
+                df.groupby("algorithm")[metric]
+                .transform(lambda s: s.rolling(window=3, min_periods=1).mean())
+            )
+    return df
+
+
+def build_round_summary(ts_df, metric):
+    summary = ts_df.groupby("round")[metric].agg(["mean", "min", "max", "std"]).reset_index()
+    summary.columns = ["round", "mean", "min", "max", "std"]
+    summary["round_label"] = "Round " + summary["round"].astype(str)
+    return summary
+
+
+def build_metric_matrix(ts_df, metric, selected_algorithms):
+    subset = ts_df[ts_df["algorithm"].isin(selected_algorithms)]
+    return subset.pivot(index="algorithm", columns="round", values=metric).reindex(selected_algorithms)
+
+
+def compute_selected_stats(ts_df, selected_algorithms, metric, start_round, end_round):
+    subset = ts_df[
+        ts_df["algorithm"].isin(selected_algorithms)
+        & (ts_df["round"] >= start_round)
+        & (ts_df["round"] <= end_round)
+    ].copy()
+
+    if subset.empty:
+        return pd.DataFrame()
+
+    grouped = subset.groupby("algorithm")
+    stats = grouped[metric].agg(["mean", "min", "max", "std", "first", "last"]).reset_index()
+    stats["delta"] = stats["last"] - stats["first"]
+    stats["rounds"] = grouped.size().values
+    stats = stats.rename(
+        columns={
+            "mean": f"{metric}_mean",
+            "min": f"{metric}_min",
+            "max": f"{metric}_max",
+            "std": f"{metric}_std",
+            "first": f"{metric}_first",
+            "last": f"{metric}_last",
+            "delta": f"{metric}_delta",
+        }
+    )
+    return stats
+
+
+def render_interactive_trend(ts_df, metric, selected_algorithms, start_round, end_round, show_rolling=False):
+    subset = ts_df[
+        ts_df["algorithm"].isin(selected_algorithms)
+        & (ts_df["round"] >= start_round)
+        & (ts_df["round"] <= end_round)
+    ].copy()
+
+    if subset.empty:
+        st.warning("No data available for the selected filters.")
+        return
+
+    value_column = f"{metric}_roll3" if show_rolling else metric
+    chart_df = subset.copy()
+    chart_df["display_value"] = chart_df[value_column]
+
+    fig = px.line(
+        chart_df,
+        x="round",
+        y="display_value",
+        color="algorithm",
+        markers=True,
+        color_discrete_map=ALGO_COLORS,
+        title=f"{metric.upper()} vs Round",
+    )
+    fig.update_traces(
+        line=dict(width=3),
+        marker=dict(size=8),
+        hovertemplate="Algorithm: %{fullData.name}<br>Round: %{x}<br>Value: %{y:.4f}<extra></extra>",
+    )
+    fig.update_layout(
+        template="plotly_dark",
+        height=460,
+        margin=dict(l=10, r=10, t=60, b=10),
+        legend_title_text="Algorithm",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Communication Round",
+        yaxis_title=metric.upper(),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_metric_summary_cards(summary, selected_algorithms):
+    if not selected_algorithms:
+        return
+
+    cols = st.columns(min(4, len(selected_algorithms)))
+    for idx, algo in enumerate(selected_algorithms[: len(cols)]):
+        values = summary[algo]
+        with cols[idx]:
+            render_kpi_card(
+                algo,
+                f"F1 {values['mean_f1']:.3f} | AUC {values['mean_auc']:.3f} | Utility {values['utility']:.3f}",
+            )
 
 
 def compute_validation(summary):
@@ -296,50 +415,6 @@ def explain_hybrid_advantage(table):
     return explanation
 
 
-def render_metric_plot(df, metric, selected_algorithms):
-    plt.style.use("dark_background")
-    fig, ax = plt.subplots(figsize=(10, 4.4))
-    fig.patch.set_alpha(0.0)
-    ax.set_facecolor("none")
-    
-    sub = df[df["algorithm"].isin(selected_algorithms)]
-    for algo in selected_algorithms:
-        s = sub[sub["algorithm"] == algo]
-        if not s.empty:
-            color = ALGO_COLORS.get(algo, "#9ca3af")
-            width = 3.2 if algo == HYBRID_NAME else 2.0
-            alpha = 1.0 if algo == HYBRID_NAME else 0.75
-            ax.plot(
-                s["round"],
-                s[metric],
-                marker="o",
-                markersize=6 if algo == HYBRID_NAME else 4,
-                linewidth=width,
-                color=color,
-                alpha=alpha,
-                label=algo,
-            )
-            
-    ax.set_xlabel("Communication Round", color="#9ca3af", fontweight='bold', fontsize=10)
-    ax.set_ylabel(metric.upper(), color="#9ca3af", fontweight='bold', fontsize=10)
-    ax.set_title(f"{metric.upper()} vs Round", color="#ffffff", fontweight='bold', pad=15)
-    
-    ax.grid(alpha=0.1, color="#ffffff", linestyle="--")
-    for spine in ax.spines.values():
-        spine.set_alpha(0.15)
-        spine.set_color("#ffffff")
-        
-    ax.tick_params(axis='x', colors='#9ca3af')
-    ax.tick_params(axis='y', colors='#9ca3af')
-    
-    leg = ax.legend(loc="best", frameon=True, framealpha=0.1, edgecolor="none")
-    for text in leg.get_texts():
-        text.set_color("#e2e8f0")
-        
-    plt.tight_layout()
-    st.pyplot(fig)
-
-
 def main():
     st.set_page_config(page_title="Hybrid FL Dashboard", layout="wide", initial_sidebar_state="expanded")
     inject_theme()
@@ -366,6 +441,7 @@ def main():
     st.sidebar.header("Dashboard Controls")
     fairness_weight = st.sidebar.slider("Utility fairness weight", 0.0, 1.0, 0.2, 0.05)
     cost_weight = st.sidebar.slider("Utility cost weight", 0.0, 1.0, 0.1, 0.05)
+    max_rounds = len(next(iter(results.values()))["f1"])
 
     summary = {
         name: summarize_metrics(metrics, fairness_weight=fairness_weight, cost_weight=cost_weight)
@@ -387,6 +463,22 @@ def main():
         render_kpi_card("Hybrid Efficiency", f"{hybrid['efficiency']:.4f}")
     with k4:
         render_kpi_card("Validation Status", overall)
+
+    st.sidebar.subheader("Interactive Filters")
+    all_algorithms = list(results.keys())
+    default_algorithms = [HYBRID_NAME] + [a for a in all_algorithms if a != HYBRID_NAME][:3]
+    selected_algorithms = st.sidebar.multiselect(
+        "Algorithms to compare",
+        all_algorithms,
+        default=default_algorithms,
+    )
+    metric = st.sidebar.selectbox("Metric", ["f1", "f1_var", "cost", "auc"], index=0)
+    round_range = st.sidebar.slider("Round range", 1, max_rounds, (1, max_rounds))
+    show_rolling = st.sidebar.toggle("Show 3-round rolling average", value=False)
+    selected_round = st.sidebar.slider("Inspect round", 1, max_rounds, min(max_rounds, round_range[1]))
+
+    if not selected_algorithms:
+        selected_algorithms = default_algorithms
 
     intro_col1, intro_col2 = st.columns([2, 1])
     with intro_col1:
@@ -425,6 +517,8 @@ Why this matters:
 
     with tab1:
         st.subheader("Why Hybrid Beats Baselines")
+        render_metric_summary_cards(summary, selected_algorithms)
+
         styled = table.style.format("{:.4f}")
         st.dataframe(styled, use_container_width=True)
 
@@ -440,17 +534,78 @@ This typically produces better client subsets with higher information value per 
         )
 
         st.subheader("Interactive Metric Trends")
-        all_algorithms = list(results.keys())
-        default_algorithms = [HYBRID_NAME] + [a for a in all_algorithms if a != HYBRID_NAME][:3]
-        selected_algorithms = st.multiselect(
-            "Algorithms to plot", all_algorithms, default=default_algorithms
+        render_interactive_trend(
+            ts_df,
+            metric,
+            selected_algorithms,
+            round_range[0],
+            round_range[1],
+            show_rolling=show_rolling,
         )
-        metric = st.selectbox("Metric", ["f1", "f1_var", "cost", "auc"], index=0)
 
-        if selected_algorithms:
-            render_metric_plot(ts_df, metric, selected_algorithms)
+        round_metrics = ts_df[
+            (ts_df["round"] == selected_round) & (ts_df["algorithm"].isin(selected_algorithms))
+        ][["algorithm", "f1", "f1_var", "cost", "auc"]].set_index("algorithm")
+        st.markdown(f"#### Round {selected_round} snapshot")
+        st.dataframe(round_metrics.style.format("{:.4f}"), use_container_width=True)
+
+        comparison_metric = st.selectbox("Round drilldown metric", ["f1", "f1_var", "cost", "auc"], index=0, key="round-drilldown")
+        selected_stats = compute_selected_stats(ts_df, selected_algorithms, comparison_metric, round_range[0], round_range[1])
+        if not selected_stats.empty:
+            st.markdown(f"#### {comparison_metric.upper()} statistics in selected range")
+            numeric_columns = selected_stats.select_dtypes(include=[np.number]).columns
+            st.dataframe(
+                selected_stats.style.format("{:.4f}", subset=pd.IndexSlice[:, numeric_columns]),
+                use_container_width=True,
+            )
+
+            chart_df = build_round_summary(
+                ts_df[
+                    ts_df["algorithm"].isin(selected_algorithms)
+                    & (ts_df["round"] >= round_range[0])
+                    & (ts_df["round"] <= round_range[1])
+                ],
+                comparison_metric,
+            )
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=chart_df["round"],
+                    y=chart_df["mean"],
+                    mode="lines+markers",
+                    name="Mean",
+                    line=dict(color="#60a5fa", width=3),
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=chart_df["round"],
+                    y=chart_df["min"],
+                    mode="lines",
+                    name="Min",
+                    line=dict(color="#f59e0b", width=1.5, dash="dash"),
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=chart_df["round"],
+                    y=chart_df["max"],
+                    mode="lines",
+                    name="Max",
+                    line=dict(color="#10b981", width=1.5, dash="dash"),
+                )
+            )
+            fig.update_layout(
+                template="plotly_dark",
+                height=340,
+                margin=dict(l=10, r=10, t=40, b=10),
+                title=f"Selected-range distribution for {comparison_metric.upper()}",
+                xaxis_title="Round",
+                yaxis_title=comparison_metric.upper(),
+            )
+            st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("Select at least one algorithm.")
+            st.warning("No statistics available for the selected range.")
 
     with tab2:
         st.subheader("Saved Comparison Charts")
@@ -464,6 +619,11 @@ This typically produces better client subsets with higher information value per 
                     st.markdown('<div class="section-card">', unsafe_allow_html=True)
                     st.image(str(img_path), caption=img_path.name, use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
+
+            st.subheader("Algorithm Comparison Matrix")
+            matrix_metric = st.selectbox("Matrix metric", ["f1", "f1_var", "cost", "auc"], index=0, key="matrix-metric")
+            matrix = build_metric_matrix(ts_df, matrix_metric, selected_algorithms)
+            st.dataframe(matrix.style.format("{:.4f}"), use_container_width=True)
 
     with tab3:
         st.subheader("Model Flow")
@@ -508,7 +668,20 @@ for round in rounds:
 
     with tab4:
         st.subheader("Detailed Round-wise Metrics")
-        st.dataframe(ts_df, use_container_width=True)
+        detail_cols = ["algorithm", "round", "f1", "f1_var", "cost", "auc", "f1_roll3", "f1_var_roll3", "cost_roll3", "auc_roll3"]
+        filtered_df = ts_df[
+            ts_df["algorithm"].isin(selected_algorithms)
+            & (ts_df["round"] >= round_range[0])
+            & (ts_df["round"] <= round_range[1])
+        ]
+        st.dataframe(filtered_df[detail_cols], use_container_width=True)
+
+        st.download_button(
+            "Download filtered metrics CSV",
+            data=filtered_df.to_csv(index=False).encode("utf-8"),
+            file_name="filtered_metrics.csv",
+            mime="text/csv",
+        )
 
         st.subheader("Method Summary JSON")
         st.json(summary)
